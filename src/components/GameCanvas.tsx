@@ -15,6 +15,37 @@ const WIDTH = 900;
 const HEIGHT = 600;
 const BUBBLE_COUNT = 32;
 
+// Dictionnaire des tailles réalistes (en px) pour chaque type d'objet/animal
+const TYPE_SIZES: Record<string, {min: number, max: number}> = {
+  // Déchets
+  bottle: { min: 48, max: 68 },
+  bouteille2: { min: 48, max: 68 },
+  bouteille3: { min: 48, max: 68 },
+  can: { min: 38, max: 54 },
+  canette2: { min: 38, max: 54 },
+  pneus: { min: 64, max: 90 },
+  sacJaune: { min: 54, max: 70 },
+  sacVert: { min: 54, max: 70 },
+  tasseCafe: { min: 32, max: 44 },
+  tasseCafe2: { min: 32, max: 44 },
+  boutPlastique: { min: 28, max: 38 },
+  boutBouteilleVerre: { min: 28, max: 38 },
+  bag: { min: 54, max: 70 },
+  water: { min: 48, max: 68 },
+  oxygen: { min: 54, max: 74 },
+  // Animaux marins
+  poisson: { min: 48, max: 68 },
+  poissonBleu: { min: 48, max: 68 },
+  poissonRouge: { min: 44, max: 60 },
+  poissonLumiere: { min: 40, max: 56 },
+  raie: { min: 90, max: 140 },
+  tortue: { min: 68, max: 100 },
+  baleine: { min: 140, max: 200 },
+  dauphin: { min: 90, max: 130 },
+  hypocampe: { min: 32, max: 44 },
+  pieuvre: { min: 68, max: 100 }
+};
+
 function drawBackground(ctx: CanvasRenderingContext2D, scroll: number) {
   // Dégradé bleu horizontal
   const grad = ctx.createLinearGradient(0, 0, WIDTH, 0);
@@ -46,6 +77,34 @@ function drawBackground(ctx: CanvasRenderingContext2D, scroll: number) {
   }
 }
 
+// Fonction pour dessiner le courant marin visuel (déplacement horizontal vers la gauche)
+function drawCurrent(ctx: CanvasRenderingContext2D, time: number) {
+  const bandCount = 3;
+  for (let i = 0; i < bandCount; i++) {
+    const yBase = HEIGHT * (0.25 + 0.25 * i);
+    const speed = 0.04 + 0.02 * i; // vitesse différente pour chaque bande
+    const offset = (time * speed) % WIDTH;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, yBase);
+    for (let x = 0; x <= WIDTH + 40; x += 8) {
+      // Décalage horizontal pour l'effet de déplacement
+      const xShift = (x + WIDTH - offset) % WIDTH;
+      const wave = Math.sin((x / 120) + i) * 12 + Math.cos((x / 60) + i * 2) * 6;
+      ctx.lineTo(xShift, yBase + wave);
+    }
+    ctx.lineTo(WIDTH, yBase + 40);
+    ctx.lineTo(0, yBase + 40);
+    ctx.closePath();
+    ctx.globalAlpha = 0.10 + 0.07 * i;
+    ctx.fillStyle = i % 2 === 0 ? '#bae6fd' : '#7dd3fc';
+    ctx.filter = 'blur(2px)';
+    ctx.fill();
+    ctx.filter = 'none';
+    ctx.restore();
+  }
+}
+
 const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, running }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [assets, setAssets] = React.useState<Record<string, HTMLImageElement> | null>(null);
@@ -55,6 +114,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
   const score = useRef(0);
   const energy = useRef(100);
   const lastTrashTime = useRef(0);
+  const lastOxyTime = useRef(0);
   const scroll = useRef(0);
   // Bulles animées
   const bubbles = useRef(
@@ -68,9 +128,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
       z: Math.random() > 0.7 ? 1 : 0 // 30% passent devant les poissons
     }))
   );
-  // Bulles dynamiques du sous-marin
-  const [subBubbles, setSubBubbles] = React.useState<{x:number, y:number, r:number, vx:number, vy:number, alpha:number, life:number}[]>([]);
+  // Bulles dynamiques du sous-marin (optimisé via ref)
+  const subBubbles = useRef<{x:number, y:number, r:number, vx:number, vy:number, alpha:number, life:number}[]>([]);
+  const lastBubbleTime = useRef(0);
   const [lives, setLives] = React.useState(3);
+  const [bgKey, setBgKey] = React.useState<string>("bg1");
 
   // Chargement des assets au montage
   React.useEffect(() => {
@@ -89,18 +151,20 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
 
   // Génération d'obstacle/animal avec image
   function generateTrashWithImage(max: number, horizontal: boolean = false) {
-    // Liste de tous les types possibles (hors water)
+    // Liste de tous les types possibles (hors water/oxygen)
     const allTypes = [
       "bottle", "bouteille2", "bouteille3", "can", "canette2", "pneus", "sacJaune", "sacVert", "tasseCafe", "tasseCafe2", "boutPlastique", "boutBouteilleVerre",
       "poisson", "poissonBleu", "poissonRouge", "poissonLumiere", "raie", "tortue", "baleine", "dauphin", "hypocampe", "pieuvre"
     ];
-    // On garde water plus fréquent
-    const types = ["water", ...allTypes, ...allTypes];
+    // On rend la bouteille d'oxygène très fréquente
+    const types = ["oxygen","oxygen","oxygen","water", ...allTypes, ...allTypes];
     const type = types[Math.floor(Math.random() * types.length)] as any;
-    const size = 32 + Math.random() * 24;
+    // Taille logique selon le type
+    const sizeRange = TYPE_SIZES[type] || { min: 28, max: 38 };
+    const size = sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min);
     let x, y;
     if (horizontal) {
-      x = max + size;
+      x = WIDTH + size * 0.2; // spawn juste à droite du canvas
       y = Math.random() * (max - size);
     } else {
       x = Math.random() * (max - size);
@@ -117,35 +181,50 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
     // Update player
     player.current.update(dt, WIDTH, HEIGHT);
 
-    // Génération de bulles derrière le sous-marin si déplacement
+    // Spawn bouteille d'oxygène toutes les 15 secondes
+    if (time - lastOxyTime.current > 15000) {
+      // Taille logique pour l'oxygène
+      const sizeRange = TYPE_SIZES['oxygen'] || { min: 54, max: 74 };
+      const size = sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min);
+      const x = WIDTH + size * 0.2;
+      const y = Math.random() * (HEIGHT - size);
+      trashes.current.push(new Trash(x, y, size, 2 + Math.random() * 2, 'oxygen', assets ? assets['oxygen'] : undefined));
+      lastOxyTime.current = time;
+    }
+
+    // Génération fluide et régulière des bulles derrière le sous-marin si déplacement
     if ((player.current.vx !== 0 || player.current.vy !== 0)) {
-      // Calcul du vecteur vitesse normalisé
-      const norm = Math.sqrt(player.current.vx ** 2 + player.current.vy ** 2) || 1;
-      const vx = player.current.vx / norm;
-      const vy = player.current.vy / norm;
-      // Position arrière du sous-marin (opposé au déplacement)
-      const px = player.current.x + player.current.width / 2 - vx * (player.current.width / 2) + (vy * 6);
-      const py = player.current.y + player.current.height / 2 - vy * (player.current.height / 2) - (vx * 6);
-      // Vitesse de la bulle opposée au déplacement du sous-marin
-      const speed = 1.2 + Math.random() * 0.7 + norm * 0.7;
-      setSubBubbles(bubs => [
-        ...bubs,
-        {
-          x: px + (Math.random() - 0.5) * 4,
-          y: py + (Math.random() - 0.5) * 4,
-          r: 3 + Math.random() * 4,
-          vx: -vx * speed + (Math.random() - 0.5) * 0.5,
-          vy: -vy * speed + (Math.random() - 0.5) * 0.5,
+      if (time - lastBubbleTime.current > 32) {
+        const norm = Math.sqrt(player.current.vx ** 2 + player.current.vy ** 2) || 1;
+        const vx = player.current.vx / norm;
+        const vy = player.current.vy / norm;
+        const px = player.current.x + player.current.width / 2 - vx * (player.current.width / 2) + (vy * 6);
+        const py = player.current.y + player.current.height / 2 - vy * (player.current.height / 2) - (vx * 6);
+        const speed = 1.2 + Math.random() * 0.7 + norm * 0.7;
+        subBubbles.current.push({
+          x: px + (Math.random() - 0.5) * 2,
+          y: py + (Math.random() - 0.5) * 2,
+          r: 3.5 + Math.random() * 2.5,
+          vx: -vx * speed * (0.7 + Math.random() * 0.5),
+          vy: -vy * speed * (0.7 + Math.random() * 0.5),
           alpha: 0.22 + Math.random() * 0.18,
           life: 0
-        }
-      ].slice(-30)); // max 30 bulles
+        });
+        if (subBubbles.current.length > 40) subBubbles.current = subBubbles.current.slice(-40);
+        lastBubbleTime.current = time;
+      }
     }
-    // Animation des bulles du sous-marin
-    setSubBubbles(bubs => bubs
-      .map(b => ({ ...b, x: b.x + (b.vx || 0), y: b.y + (b.vy || 0), r: b.r * 0.98, alpha: b.alpha * 0.97, life: b.life + dt }))
-      .filter(b => b.r > 0.8 && b.alpha > 0.05 && b.life < 1200)
-    );
+    // Animation des bulles du sous-marin (interpolation douce)
+    subBubbles.current = subBubbles.current
+      .map(b => ({
+        ...b,
+        x: b.x + (b.vx || 0) * (dt / 16),
+        y: b.y + (b.vy || 0) * (dt / 16),
+        r: b.r * 0.985,
+        alpha: b.alpha * 0.975,
+        life: b.life + dt
+      }))
+      .filter(b => b.r > 0.7 && b.alpha > 0.04 && b.life < 1400);
 
     // Génération de déchets/animaux (de droite à gauche)
     if (time - lastTrashTime.current > 1300 && trashes.current.length < 30) {
@@ -157,13 +236,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
     // Collisions et suppression en un seul passage
     trashes.current = trashes.current.filter(t => {
       if (player.current && player.current.collidesWith(t)) {
-        if (t.type === 'water') {
+        if (t.type === 'oxygen') {
           energy.current = Math.min(100, energy.current + 30);
+        } else if (t.type === 'water') {
+          energy.current = Math.min(100, energy.current + 20);
         } else if (["poisson", "poissonBleu", "poissonRouge", "poissonLumiere", "raie", "tortue", "baleine", "dauphin", "hypocampe", "pieuvre"].includes(t.type)) {
-          // Collision avec un animal : perte de vie
           setLives(l => {
             if (l > 1) return l - 1;
-            // Game over si plus de vie
             onGameOver();
             return 0;
           });
@@ -183,7 +262,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) {
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
-      drawBackground(ctx, scroll.current);
+      // Affichage du fond marin image
+      if (assets && bgKey && assets[bgKey]) {
+        ctx.drawImage(assets[bgKey], 0, 0, WIDTH, HEIGHT);
+      } else {
+        drawBackground(ctx, scroll.current);
+      }
+      // Effet courant marin visuel
+      drawCurrent(ctx, time);
       // Bulles animées (derrière)
       bubbles.current.filter(b => b.z === 0).forEach(b => {
         ctx.save();
@@ -207,7 +293,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
         }
       });
       // Bulles du sous-marin (derrière le sous-marin)
-      subBubbles.forEach(b => {
+      subBubbles.current.forEach(b => {
         ctx.save();
         ctx.globalAlpha = b.alpha;
         ctx.beginPath();
@@ -220,7 +306,43 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
         ctx.restore();
       });
       // Déchets/animaux
-      trashes.current.forEach(t => t.draw(ctx, true, time));
+      trashes.current.forEach(t => {
+        if (t.image) {
+          const ratio = t.image.width / t.image.height;
+          let drawW = t.size, drawH = t.size;
+          if (ratio > 1) { drawW = t.size; drawH = t.size / ratio; }
+          else { drawH = t.size; drawW = t.size * ratio; }
+          ctx.save();
+          // Flip horizontal pour les animaux marins sauf hypocampe
+          const isAnimal = [
+            "poisson", "poissonBleu", "poissonRouge", "poissonLumiere", "raie", "tortue", "baleine", "dauphin", "pieuvre"
+          ].includes(t.type);
+          if (isAnimal) {
+            ctx.translate(t.x + drawW / 2, t.y + drawH / 2);
+            ctx.scale(-1, 1); // flip horizontal
+            if (t.angle) ctx.rotate(t.angle);
+            ctx.globalAlpha = t.type === 'water' || t.type === 'oxygen' ? 0.85 : 1;
+            ctx.drawImage(t.image, -drawW / 2, -drawH / 2, drawW, drawH);
+          } else if (t.type === 'hypocampe') {
+            ctx.translate(t.x + drawW / 2, t.y + drawH / 2);
+            if (t.angle) ctx.rotate(t.angle);
+            ctx.globalAlpha = 1;
+            ctx.drawImage(t.image, -drawW / 2, -drawH / 2, drawW, drawH);
+          } else if (t.angle) {
+            ctx.translate(t.x + drawW / 2, t.y + drawH / 2);
+            ctx.rotate(t.angle);
+            ctx.globalAlpha = t.type === 'water' || t.type === 'oxygen' ? 0.85 : 1;
+            ctx.drawImage(t.image, -drawW / 2, -drawH / 2, drawW, drawH);
+          } else {
+            ctx.globalAlpha = t.type === 'water' || t.type === 'oxygen' ? 0.85 : 1;
+            ctx.drawImage(t.image, t.x, t.y, drawW, drawH);
+          }
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        } else {
+          t.draw(ctx, true, performance.now());
+        }
+      });
       // Bulles animées (devant)
       bubbles.current.filter(b => b.z === 1).forEach(b => {
         ctx.save();
@@ -246,7 +368,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
       // Sous-marin
       player.current.draw(ctx);
     }
-  }, [running, ready, assets, onScore, onEnergy, onGameOver]);
+  }, [running, ready, assets, onScore, onEnergy, onGameOver, bgKey]);
 
   useGameLoop(gameLoopCallback, running && ready);
 
@@ -277,10 +399,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
       score.current = 0;
       energy.current = 100;
       lastTrashTime.current = 0;
+      lastOxyTime.current = 0;
       scroll.current = 0;
       player.current.x = 60;
       player.current.y = HEIGHT / 2 - 14;
       setLives(3);
+      // Choix du fond marin aléatoire
+      const bgs = ["bg1", "bg2", "bg3", "bg4"];
+      setBgKey(bgs[Math.floor(Math.random() * bgs.length)]);
     }
   }, [running, ready]);
 

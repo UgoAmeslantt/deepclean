@@ -1,7 +1,7 @@
 // Utilitaire de chargement d'assets pour Deep Clean
 import { TrashType } from "./Trash";
 
-export const assetMap: Record<TrashType | "player", string> = {
+export const assetMap: Record<TrashType | "player" | "bg1" | "bg2" | "bg3" | "bg4" | "oxygen", string> = {
   // Déchets
   bottle: "/Images/Déchets/bouteille.png",
   bouteille2: "/Images/Déchets/bouteille-2.png",
@@ -17,6 +17,7 @@ export const assetMap: Record<TrashType | "player", string> = {
   boutBouteilleVerre: "/Images/Déchets/bout-Bouteille-verre.png",
   bag: "/Images/Déchets/sacPoubelle-vert.png", // fallback
   water: "/Images/Déchets/bouteille.png", // fallback
+  oxygen: "/Images/bouteille-oxygene.png",
   // Animaux marins
   poisson: "/Images/Animaux marins/poisson.png",
   poissonBleu: "/Images/Animaux marins/poisson-bleu.png",
@@ -29,7 +30,12 @@ export const assetMap: Record<TrashType | "player", string> = {
   hypocampe: "/Images/Animaux marins/hypocampe.png",
   pieuvre: "/Images/Animaux marins/pieuvre.png",
   // Joueur
-  player: "/Images/sous-marin.png"
+  player: "/Images/sous-marin.png",
+  // Fonds marins
+  bg1: "/Images/fond marin/ocean-bg-1.png",
+  bg2: "/Images/fond marin/ocean-bg-2.png",
+  bg3: "/Images/fond marin/ocean-bg-3.png",
+  bg4: "/Images/fond marin/ocean-bg-4.png"
 };
 
 export function loadAllAssets(): Promise<Record<string, HTMLImageElement>> {

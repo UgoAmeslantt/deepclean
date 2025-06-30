@@ -3,6 +3,7 @@ export type TrashType =
   | "can"
   | "bag"
   | "water"
+  | "oxygen"
   | "bouteille2"
   | "bouteille3"
   | "canette2"
@@ -115,6 +116,10 @@ export class Trash {
       ctx.fill();
     }
     ctx.restore();
+  }
+
+  isEnergyBonus() {
+    return this.type === "water" || this.type === "oxygen";
   }
 }
 

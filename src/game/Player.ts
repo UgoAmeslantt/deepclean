@@ -1,7 +1,7 @@
 export class Player {
   x: number;
   y: number;
-  speed: number = 4.2;
+  speed: number = 600; // pixels/seconde, ajusté pour correspondre à l'ancien feeling
   width: number = 100;
   height: number = 56;
   vx: number = 0;
@@ -23,8 +23,9 @@ export class Player {
     if (this.keys["ArrowDown"]) this.vy = 1;
     if (this.keys["ArrowLeft"]) this.vx = -1;
     if (this.keys["ArrowRight"]) this.vx = 1;
-    this.x += this.vx * this.speed;
-    this.y += this.vy * this.speed;
+    const delta = dt / 1000; // dt en secondes
+    this.x += this.vx * this.speed * delta;
+    this.y += this.vy * this.speed * delta;
     // Limites
     this.x = Math.max(0, Math.min(maxW - this.width, this.x));
     this.y = Math.max(0, Math.min(maxH - this.height, this.y));
@@ -49,12 +50,16 @@ export class Player {
     let angle = 0;
     if (this.vy < 0) angle = -0.28; // monte
     if (this.vy > 0) angle = 0.28;  // descend
+    // Flip horizontal si va à gauche
+    const flip = this.vx < 0;
     if (this.image) {
       ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+      if (flip) ctx.scale(-1, 1);
       ctx.rotate(angle);
       ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
     } else {
       ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+      if (flip) ctx.scale(-1, 1);
       ctx.rotate(angle);
       // Corps du sous-marin (ovale orienté droite)
       ctx.beginPath();
