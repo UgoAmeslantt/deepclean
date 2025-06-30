@@ -437,11 +437,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
   }, [running, ready]);
 
   useEffect(() => {
-    collectSound.current = new window.Audio('/sounds/collect.mp3');
+    collectSound.current = new window.Audio('/Sounds/collect.mp3');
     collectSound.current.volume = 0.7;
-    hitSound.current = new window.Audio('/sounds/hit.mp3');
+    hitSound.current = new window.Audio('/Sounds/hit.mp3');
     hitSound.current.volume = 0.7;
-    gameOverSound.current = new window.Audio('/sounds/gameover.mp3');
+    gameOverSound.current = new window.Audio('/Sounds/gameover.mp3');
     gameOverSound.current.volume = 0.7;
   }, []);
 

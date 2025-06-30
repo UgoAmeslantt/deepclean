@@ -3,39 +3,39 @@ import { TrashType } from "./Trash";
 
 export const assetMap: Record<TrashType | "player" | "bg1" | "bg2" | "bg3" | "bg4" | "oxygen", string> = {
   // Déchets
-  bottle: "/Images/Déchets/bouteille.png",
-  bouteille2: "/Images/Déchets/bouteille-2.png",
-  bouteille3: "/Images/Déchets/bouteille-3.png",
-  can: "/Images/Déchets/canette.png",
-  canette2: "/Images/Déchets/canette-2.png",
-  pneus: "/Images/Déchets/pneus.png",
-  sacJaune: "/Images/Déchets/sacPoubelle-jaune.png",
-  sacVert: "/Images/Déchets/sacPoubelle-vert.png",
-  tasseCafe: "/Images/Déchets/tasse-cafe.png",
-  tasseCafe2: "/Images/Déchets/tasse-cafe-2.png",
-  boutPlastique: "/Images/Déchets/bout-plastique.png",
-  boutBouteilleVerre: "/Images/Déchets/bout-Bouteille-verre.png",
-  bag: "/Images/Déchets/sacPoubelle-vert.png", // fallback
-  water: "/Images/Déchets/bouteille.png", // fallback
+  bottle: "/Images/Dechets/bouteille.png",
+  bouteille2: "/Images/Dechets/bouteille-2.png",
+  bouteille3: "/Images/Dechets/bouteille-3.png",
+  can: "/Images/Dechets/canette.png",
+  canette2: "/Images/Dechets/canette-2.png",
+  pneus: "/Images/Dechets/pneus.png",
+  sacJaune: "/Images/Dechets/sacPoubelle-jaune.png",
+  sacVert: "/Images/Dechets/sacPoubelle-vert.png",
+  tasseCafe: "/Images/Dechets/tasse-cafe.png",
+  tasseCafe2: "/Images/Dechets/tasse-cafe-2.png",
+  boutPlastique: "/Images/Dechets/bout-plastique.png",
+  boutBouteilleVerre: "/Images/Dechets/bout-Bouteille-verre.png",
+  bag: "/Images/Dechets/sacPoubelle-vert.png", // fallback
+  water: "/Images/Dechets/bouteille.png", // fallback
   oxygen: "/Images/bouteille-oxygene.png",
   // Animaux marins
-  poisson: "/Images/Animaux marins/poisson.png",
-  poissonBleu: "/Images/Animaux marins/poisson-bleu.png",
-  poissonRouge: "/Images/Animaux marins/poisson-rouge.png",
-  poissonLumiere: "/Images/Animaux marins/poisson-lumière.png",
-  raie: "/Images/Animaux marins/raie.png",
-  tortue: "/Images/Animaux marins/tortue.png",
-  baleine: "/Images/Animaux marins/baleine.png",
-  dauphin: "/Images/Animaux marins/dauphin.png",
-  hypocampe: "/Images/Animaux marins/hypocampe.png",
-  pieuvre: "/Images/Animaux marins/pieuvre.png",
+  poisson: "/Images/Animaux_marins/poisson.png",
+  poissonBleu: "/Images/Animaux_marins/poisson-bleu.png",
+  poissonRouge: "/Images/Animaux_marins/poisson-rouge.png",
+  poissonLumiere: "/Images/Animaux_marins/poisson-lumiere.png",
+  raie: "/Images/Animaux_marins/raie.png",
+  tortue: "/Images/Animaux_marins/tortue.png",
+  baleine: "/Images/Animaux_marins/baleine.png",
+  dauphin: "/Images/Animaux_marins/dauphin.png",
+  hypocampe: "/Images/Animaux_marins/hypocampe.png",
+  pieuvre: "/Images/Animaux_marins/pieuvre.png",
   // Joueur
   player: "/Images/sous-marin.png",
   // Fonds marins
-  bg1: "/Images/fond marin/ocean-bg-1.png",
-  bg2: "/Images/fond marin/ocean-bg-2.png",
-  bg3: "/Images/fond marin/ocean-bg-3.png",
-  bg4: "/Images/fond marin/ocean-bg-4.png"
+  bg1: "/Images/Fond_marin/ocean-bg-1.png",
+  bg2: "/Images/Fond_marin/ocean-bg-2.png",
+  bg3: "/Images/Fond_marin/ocean-bg-3.png",
+  bg4: "/Images/Fond_marin/ocean-bg-4.png"
 };
 
 export function loadAllAssets(): Promise<Record<string, HTMLImageElement>> {

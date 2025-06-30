@@ -69,7 +69,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!ambianceRef.current) {
-      ambianceRef.current = new window.Audio('/sounds/ambiance.mp3');
+      ambianceRef.current = new window.Audio('/Sounds/Ambiance_Underwater_Sounds.mp3');
       ambianceRef.current.loop = true;
       ambianceRef.current.volume = 0.5;
     }
