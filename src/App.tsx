@@ -10,12 +10,18 @@ const App: React.FC = () => {
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
   const [showAwareness, setShowAwareness] = useState(false);
+  const [awarenessShown, setAwarenessShown] = useState(false);
+  const [pendingAwareness, setPendingAwareness] = useState(false);
 
   const handleScore = (s: number) => setScore(s);
   const handleEnergy = (e: number) => setEnergy(e);
   const handleGameOver = () => setGameOver(true);
   const handleReset = () => {
     setScore(0);
+    setEnergy(100);
+    setGameOver(false);
+  };
+  const handleSoftReset = () => {
     setEnergy(100);
     setGameOver(false);
   };
@@ -28,25 +34,65 @@ const App: React.FC = () => {
   const TOTAL_DECHETS = 5_000_000_000_000;
   const percentRamasse = (score / TOTAL_DECHETS) * 100;
 
-  // Affichage pédagogique quand score >= 30 pour la première fois
+  // Nouvelle logique pour la pop-up informative et Game Over
   useEffect(() => {
-    if (score >= 30 && !showAwareness) {
+    // Afficher la pop-up la première fois que le score atteint 30 (hors Game Over)
+    if (score >= 30 && !awarenessShown && !showAwareness && started && !gameOver) {
+      setShowAwareness(true);
+      setAwarenessShown(true);
+      setPendingAwareness(false);
+    }
+    // Afficher la pop-up à chaque Game Over (quel que soit le score)
+    else if (gameOver && !showAwareness && started) {
+      // Si le score >= 30 et la pop-up informative n'a pas encore été vue, on la montrera après le Game Over
+      if (score >= 30 && !awarenessShown) {
+        setPendingAwareness(true);
+        setAwarenessShown(true);
+      }
       setShowAwareness(true);
     }
-  }, [score, showAwareness]);
+  }, [score, gameOver, showAwareness, started, awarenessShown]);
+
+  // Quand on ferme la pop-up après un Game Over, si la pop-up informative doit être montrée, on la montre
+  const handleContinue = () => {
+    setShowAwareness(false);
+    handleSoftReset();
+    setStarted(true);
+    if (pendingAwareness) {
+      setTimeout(() => setShowAwareness(true), 100);
+      setPendingAwareness(false);
+    }
+  };
+
+  // Musique d'ambiance
+  const ambianceRef = React.useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!ambianceRef.current) {
+      ambianceRef.current = new window.Audio('/sounds/ambiance.mp3');
+      ambianceRef.current.loop = true;
+      ambianceRef.current.volume = 0.5;
+    }
+    if (started && !showAwareness) {
+      ambianceRef.current.play().catch(() => {});
+    } else {
+      ambianceRef.current.pause();
+      ambianceRef.current.currentTime = 0;
+    }
+  }, [started, showAwareness]);
 
   return (
-    <div className="min-h-screen min-w-full flex items-center justify-center bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900">
-      <div className="flex flex-col items-center w-full">
+    <div className="w-screen min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900">
+      <div className="flex flex-col items-center w-full h-full flex-1 justify-center">
         {/* Écran pédagogique */}
         {showAwareness && started && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80">
             <div className="bg-white rounded-2xl shadow-2xl border-4 border-blue-800 p-8 max-w-xl text-blue-900 text-center">
-              <h2 className="text-2xl md:text-3xl font-extrabold mb-4">Prise de conscience</h2>
+              <h2 className="text-2xl md:text-3xl font-extrabold mb-4">Bilan de ta mission</h2>
               <div className="text-lg mb-4">
-                Même après avoir ramassé <span className="font-bold">30 déchets</span>, tu n'as éliminé que&nbsp;
-                <span className="font-mono text-blue-700">{percentRamasse.toFixed(15)}%</span> des déchets présents dans l'océan.<br/>
-                <span className="text-xs text-blue-700">(soit 0,{"0".repeat(12)}6%...)</span>
+                Tu as ramassé <span className="font-bold">{score}</span> déchets.<br/>
+                Cela représente <span className="font-mono text-blue-700">{percentRamasse.toFixed(10)}%</span> des déchets présents dans l'océan.<br/>
+                <span className="text-xs text-blue-700">(soit 0,{"0".repeat(8)}{percentRamasse.toFixed(2).replace('.', '')}%...)</span>
               </div>
               <div className="text-base text-blue-800 mb-6">
                 La pollution marine est un problème immense : chaque geste compte, mais il faut agir collectivement pour protéger notre planète bleue.<br/>
@@ -54,7 +100,7 @@ const App: React.FC = () => {
               </div>
               <button
                 className="px-8 py-3 bg-blue-500 text-white text-xl rounded-full shadow hover:bg-blue-600 transition font-bold"
-                onClick={() => setShowAwareness(false)}
+                onClick={handleContinue}
               >
                 Continuer
               </button>
@@ -78,66 +124,21 @@ const App: React.FC = () => {
           </div>
         ) : (
           <>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mt-8 mb-2 tracking-tight text-center">
-              Deep Clean: Mission Océan
-            </h1>
-            <p className="text-blue-100 text-center mb-6 text-lg max-w-xl">
-              Incarne un sous-marin nettoyeur et ramasse un maximum de déchets dans l'océan !<br/>
-              <span className="text-blue-200 text-sm">Utilise les flèches du clavier pour te déplacer. Évite de manquer d'énergie !</span>
-            </p>
-            <div className="flex items-center justify-center w-full min-h-[600px] flex-1">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-10 bg-white/90 rounded-3xl shadow-2xl border-8 border-blue-800 p-8">
-                {/* Panneau latéral */}
-                <div className="bg-gradient-to-b from-blue-200 via-blue-100 to-blue-50 rounded-2xl shadow-lg p-6 flex flex-col items-center min-w-[220px] mb-6 md:mb-0 border-2 border-blue-300">
-                  <div className="text-2xl font-bold text-blue-900 mb-2">Score</div>
-                  <div className="text-4xl font-extrabold text-blue-700 mb-4">{score}</div>
-                  {score >= 30 && (
-                    <div className="text-xs text-blue-800 mb-2">
-                      Tu as ramassé <span className="font-bold">{percentRamasse.toFixed(5)}%</span> des déchets présents dans l'océan !
-                    </div>
-                  )}
-                  <div className="w-40 h-6 bg-gray-300 rounded relative mb-2">
-                    <div
-                      className="h-6 rounded transition-all absolute left-0 top-0"
-                      style={{
-                        width: `${energy}%`,
-                        background: energy > 30 ? "#22d3ee" : "#f87171",
-                      }}
-                    />
-                    <span className="absolute w-full text-center text-xs font-bold text-blue-900" style={{lineHeight: '1.5rem'}}>
-                      {Math.max(0, Math.floor(energy))} %
-                    </span>
-                  </div>
-                  <div className="text-xs text-blue-700 mb-4">Énergie</div>
-                  {gameOver ? (
-                    <>
-                      <div className="text-lg text-red-600 font-bold mb-2">Game Over !</div>
-                      <button className="px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition" onClick={handleReset}>
-                        Rejouer
-                      </button>
-                    </>
-                  ) : (
-                    <button className="px-4 py-2 bg-blue-200 text-blue-900 rounded shadow hover:bg-blue-300 transition mt-2" onClick={handleReset}>
-                      Reset
-                    </button>
-                  )}
-                </div>
-                {/* Canvas centré dans un encadré */}
-                <div className="relative flex flex-col items-center">
-                  <div className="rounded-2xl shadow-xl border-4 border-blue-400 bg-blue-100/90 p-4 flex flex-col items-center">
-                    <GameCanvas
-                      onScore={handleScore}
-                      onEnergy={handleEnergy}
-                      onGameOver={handleGameOver}
-                      running={!gameOver && !showAwareness}
-                    />
-                  </div>
+            {(!showAwareness && started) ? (
+              <div className="flex flex-col w-screen min-h-screen bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900">
+                <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mt-8 mb-4 tracking-tight text-center">
+                  Deep Clean: Mission Océan
+                </h1>
+                <div className="flex-1 flex items-center justify-center w-full h-full pb-8">
+                  <GameCanvas
+                    onScore={handleScore}
+                    onEnergy={handleEnergy}
+                    onGameOver={handleGameOver}
+                    running={!gameOver && !showAwareness}
+                  />
                 </div>
               </div>
-            </div>
-            <footer className="mt-10 mb-4 text-blue-200 text-xs text-center opacity-80">
-              © {new Date().getFullYear()} Deep Clean. Un mini-jeu React Canvas.
-            </footer>
+            ) : null}
           </>
         )}
       </div>

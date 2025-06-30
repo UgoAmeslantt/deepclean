@@ -133,6 +133,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
   const lastBubbleTime = useRef(0);
   const [lives, setLives] = React.useState(3);
   const [bgKey, setBgKey] = React.useState<string>("bg1");
+  // Effets sonores
+  const collectSound = useRef<HTMLAudioElement | null>(null);
+  const hitSound = useRef<HTMLAudioElement | null>(null);
+  const gameOverSound = useRef<HTMLAudioElement | null>(null);
 
   // Chargement des assets au montage
   React.useEffect(() => {
@@ -244,11 +248,17 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
           setLives(l => {
             if (l > 1) return l - 1;
             onGameOver();
+            // Effet sonore collision animal
+            if (hitSound.current) { hitSound.current.currentTime = 0; hitSound.current.play(); }
+            // Effet sonore game over
+            setTimeout(() => { if (gameOverSound.current) { gameOverSound.current.currentTime = 0; gameOverSound.current.play(); } }, 100);
             return 0;
           });
         } else {
           score.current += 1;
           onScore(score.current);
+          // Effet sonore collecte déchet
+          if (collectSound.current) { collectSound.current.currentTime = 0; collectSound.current.play(); }
         }
         return false; // supprimé
       }
@@ -367,6 +377,22 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
       });
       // Sous-marin
       player.current.draw(ctx);
+
+      // Draw score and energy overlay
+      if (running) {
+        ctx.save();
+        ctx.font = 'bold 32px Arial, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = '#fff';
+        // Score (top left)
+        ctx.fillText(`Score: ${score.current}`, 24, 24);
+        // Energy (top right)
+        ctx.textAlign = 'right';
+        ctx.fillText(`Énergie: ${Math.max(0, Math.floor(energy.current))} %`, WIDTH - 24, 24);
+        ctx.restore();
+      }
     }
   }, [running, ready, assets, onScore, onEnergy, onGameOver, bgKey]);
 
@@ -410,17 +436,45 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onScore, onEnergy, onGameOver, 
     }
   }, [running, ready]);
 
+  useEffect(() => {
+    collectSound.current = new window.Audio('/sounds/collect.mp3');
+    collectSound.current.volume = 0.7;
+    hitSound.current = new window.Audio('/sounds/hit.mp3');
+    hitSound.current.volume = 0.7;
+    gameOverSound.current = new window.Audio('/sounds/gameover.mp3');
+    gameOverSound.current.volume = 0.7;
+  }, []);
+
+  // Responsive resize: scale canvas to fit parent while keeping internal resolution
+  useEffect(() => {
+    function handleResize() {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      // Use window size for maximum canvas area
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      // Maintain aspect ratio
+      const scale = Math.min(windowWidth / WIDTH, windowHeight / HEIGHT);
+      canvas.style.width = `${WIDTH * scale}px`;
+      canvas.style.height = `${HEIGHT * scale}px`;
+    }
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!ready) {
     return <div className="flex items-center justify-center w-full h-full text-blue-900 text-xl">Chargement des images...</div>;
   }
 
   return (
-    <div className="relative">
+    <div className="w-full h-full flex items-center justify-center fixed inset-0">
       <canvas
         ref={canvasRef}
         width={WIDTH}
         height={HEIGHT}
-        className="border-4 border-blue-800 rounded-lg bg-blue-100 shadow-lg"
+        className="block bg-blue-200 rounded-xl shadow-lg border-2 border-blue-300"
+        style={{ width: '100%', height: '100%', aspectRatio: '900/600', display: 'block', objectFit: 'contain' }}
       />
       {/* Affichage des cœurs (vies) */}
       <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
