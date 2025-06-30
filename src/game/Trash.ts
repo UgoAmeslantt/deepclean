@@ -1,4 +1,29 @@
-export type TrashType = "bottle" | "can" | "bag" | "water";
+export type TrashType =
+  | "bottle"
+  | "can"
+  | "bag"
+  | "water"
+  | "bouteille2"
+  | "bouteille3"
+  | "canette2"
+  | "pneus"
+  | "sacJaune"
+  | "sacVert"
+  | "tasseCafe"
+  | "tasseCafe2"
+  | "boutPlastique"
+  | "boutBouteilleVerre"
+  // Animaux marins
+  | "poisson"
+  | "poissonBleu"
+  | "poissonRouge"
+  | "poissonLumiere"
+  | "raie"
+  | "tortue"
+  | "baleine"
+  | "dauphin"
+  | "hypocampe"
+  | "pieuvre";
 
 export class Trash {
   x: number;
@@ -6,21 +31,58 @@ export class Trash {
   size: number;
   speed: number;
   type: TrashType;
+  image?: HTMLImageElement;
+  animOffset: number; // pour oscillation
+  angle: number; // pour rotation
 
-  constructor(x: number, y: number, size: number, speed: number, type: TrashType) {
+  constructor(x: number, y: number, size: number, speed: number, type: TrashType, image?: HTMLImageElement) {
     this.x = x;
     this.y = y;
     this.size = size;
     this.speed = speed;
     this.type = type;
+    this.image = image;
+    this.animOffset = Math.random() * 1000;
+    this.angle = 0;
   }
 
-  update(dt: number, horizontal: boolean = false) {
+  update(dt: number, horizontal: boolean = false, time: number = 0) {
     if (horizontal) {
       this.x -= this.speed * (dt / 16);
     } else {
       this.y += this.speed * (dt / 16);
     }
+    // Animation : oscillation ou rotation selon le type
+    if (this.isFishOrAnimal()) {
+      // Oscillation personnalisée selon le type
+      let oscSpeed = 0.004, oscAmp = 0.7, rotSpeed = 0.003, rotAmp = 0.18;
+      if (this.type === "raie" || this.type === "tortue") { oscSpeed = 0.002; oscAmp = 1.2; rotAmp = 0.22; }
+      if (this.type.startsWith("poisson")) { oscSpeed = 0.006; oscAmp = 0.5; rotAmp = 0.13; }
+      // Accélération aléatoire pour certains poissons
+      if (this.type.startsWith("poisson") && Math.random() < 0.01) {
+        this.speed += (Math.random() - 0.5) * 0.8;
+        this.speed = Math.max(1.2, Math.min(4.5, this.speed));
+      }
+      this.y += Math.sin((time + this.animOffset) * oscSpeed) * oscAmp;
+      this.x += Math.cos((time + this.animOffset) * (oscSpeed * 0.5)) * 0.4;
+      this.angle = Math.sin((time + this.animOffset) * rotSpeed) * rotAmp;
+    } else if (this.isTrash()) {
+      // Déchets : flottement/rotation
+      let rotSpeed = 0.002, rotAmp = 0.12;
+      if (["pneus", "can", "canette2"].includes(this.type)) { rotSpeed = 0.001; rotAmp = 0.08; }
+      this.angle = Math.sin((time + this.animOffset) * rotSpeed) * rotAmp;
+    }
+  }
+
+  isFishOrAnimal() {
+    return [
+      "poisson", "poissonBleu", "poissonRouge", "poissonLumiere", "raie", "tortue", "baleine", "dauphin", "hypocampe", "pieuvre"
+    ].includes(this.type);
+  }
+  isTrash() {
+    return [
+      "bottle", "bouteille2", "bouteille3", "can", "canette2", "pneus", "sacJaune", "sacVert", "tasseCafe", "tasseCafe2", "boutPlastique", "boutBouteilleVerre", "bag", "water"
+    ].includes(this.type);
   }
 
   isOutOfScreen(max: number, horizontal: boolean = false) {
@@ -31,98 +93,26 @@ export class Trash {
     }
   }
 
-  draw(ctx: CanvasRenderingContext2D, horizontal = false) {
+  draw(ctx: CanvasRenderingContext2D, horizontal = false, time: number = 0) {
     ctx.save();
-    if (this.type === "bottle") {
-      // Corps de la bouteille
-      ctx.beginPath();
-      ctx.ellipse(this.x + this.size / 2, this.y + this.size * 0.6, this.size * 0.18, this.size * 0.38, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = "#60a5fa";
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      // Bouchon
-      ctx.beginPath();
-      ctx.ellipse(this.x + this.size / 2, this.y + this.size * 0.18, this.size * 0.13, this.size * 0.08, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = "#0ea5e9";
-      ctx.fill();
-      // Étiquette
-      ctx.fillStyle = "#a3e635";
-      ctx.fillRect(this.x + this.size * 0.28, this.y + this.size * 0.45, this.size * 0.44, this.size * 0.12);
-    } else if (this.type === "can") {
-      // Corps de la canette
-      ctx.beginPath();
-      ctx.ellipse(this.x + this.size / 2, this.y + this.size * 0.5, this.size * 0.28, this.size * 0.32, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = "#ef4444";
-      ctx.shadowColor = "#b91c1c";
-      ctx.shadowBlur = 6;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      // Reflet
-      ctx.beginPath();
-      ctx.ellipse(this.x + this.size / 2 + this.size * 0.09, this.y + this.size * 0.45, this.size * 0.06, this.size * 0.13, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = "#fff";
-      ctx.globalAlpha = 0.4;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      // Haut et bas
-      ctx.fillStyle = "#d1d5db";
-      ctx.fillRect(this.x + this.size * 0.22, this.y + this.size * 0.32, this.size * 0.56, this.size * 0.05);
-      ctx.fillRect(this.x + this.size * 0.22, this.y + this.size * 0.68, this.size * 0.56, this.size * 0.05);
-    } else if (this.type === "water") {
-      // Bouteille d'eau (énergie)
-      ctx.beginPath();
-      ctx.ellipse(this.x + this.size / 2, this.y + this.size * 0.6, this.size * 0.18, this.size * 0.38, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = "#38bdf8";
-      ctx.globalAlpha = 0.92;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      // Bouchon
-      ctx.beginPath();
-      ctx.ellipse(this.x + this.size / 2, this.y + this.size * 0.18, this.size * 0.13, this.size * 0.08, 0, 0, 2 * Math.PI);
-      ctx.fillStyle = "#0e7490";
-      ctx.fill();
-      // Étiquette blanche
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(this.x + this.size * 0.28, this.y + this.size * 0.45, this.size * 0.44, this.size * 0.12);
-      // Goutte bleue sur l'étiquette
-      ctx.beginPath();
-      ctx.arc(this.x + this.size / 2, this.y + this.size * 0.51, this.size * 0.06, 0, 2 * Math.PI);
-      ctx.fillStyle = "#38bdf8";
-      ctx.globalAlpha = 0.7;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+    // Clignotement pour les bouteilles d'eau (énergie)
+    let blink = 1;
+    if (this.type === "water" && time) {
+      blink = 0.7 + 0.3 * Math.abs(Math.sin(time * 0.008 + this.animOffset));
+      ctx.globalAlpha = blink;
+    }
+    // Animation : applique la rotation autour du centre
+    if (this.angle && this.image) {
+      ctx.translate(this.x + this.size / 2, this.y + this.size / 2);
+      ctx.rotate(this.angle);
+      ctx.drawImage(this.image, -this.size / 2, -this.size / 2, this.size, this.size);
+    } else if (this.image) {
+      ctx.drawImage(this.image, this.x, this.y, this.size, this.size);
     } else {
-      // Sac plastique
-      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(this.x + this.size * 0.2, this.y + this.size * 0.7);
-      ctx.lineTo(this.x + this.size * 0.8, this.y + this.size * 0.7);
-      ctx.lineTo(this.x + this.size * 0.7, this.y + this.size * 0.3);
-      ctx.lineTo(this.x + this.size * 0.3, this.y + this.size * 0.3);
-      ctx.closePath();
-      ctx.fillStyle = "#fef08a";
-      ctx.globalAlpha = 0.6;
+      ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, 2 * Math.PI);
+      ctx.fillStyle = '#aaa';
       ctx.fill();
-      ctx.globalAlpha = 1;
-      // Poignées
-      ctx.beginPath();
-      ctx.arc(this.x + this.size * 0.3, this.y + this.size * 0.3, this.size * 0.07, 0, 2 * Math.PI);
-      ctx.arc(this.x + this.size * 0.7, this.y + this.size * 0.3, this.size * 0.07, 0, 2 * Math.PI);
-      ctx.fillStyle = "#fde047";
-      ctx.globalAlpha = 0.8;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      // Effet froissé
-      ctx.strokeStyle = "#eab308";
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(this.x + this.size * 0.5, this.y + this.size * 0.3);
-      ctx.lineTo(this.x + this.size * 0.5, this.y + this.size * 0.7);
-      ctx.moveTo(this.x + this.size * 0.4, this.y + this.size * 0.5);
-      ctx.lineTo(this.x + this.size * 0.6, this.y + this.size * 0.6);
-      ctx.stroke();
-      ctx.restore();
     }
     ctx.restore();
   }
