@@ -42,11 +42,17 @@ export function loadAllAssets(): Promise<Record<string, HTMLImageElement>> {
   const entries = Object.entries(assetMap);
   return Promise.all(
     entries.map(([key, src]) =>
-      new Promise<[string, HTMLImageElement]>((resolve, reject) => {
+      new Promise<[string, HTMLImageElement]>((resolve) => {
         const img = new window.Image();
         img.src = src;
         img.onload = () => resolve([key, img]);
-        img.onerror = () => reject(new Error("Erreur chargement image: " + src));
+        img.onerror = () => {
+          console.error("Erreur chargement image:", src);
+          // Transparent 1x1 PNG as placeholder
+          const placeholder = new window.Image();
+          placeholder.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+          resolve([key, placeholder]);
+        };
       })
     )
   ).then((results) => Object.fromEntries(results));
